@@ -12,12 +12,12 @@ COPY docker/php/php.ini "$PHP_INI_DIR/php.ini"
 WORKDIR /var/www/backend
 
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
 COPY backend/ ./
 COPY docker/php/.env.docker .env
 
-RUN mkdir -p database \
+RUN mkdir -p database resources/views \
     && touch database/database.sqlite \
     && chmod -R 775 storage bootstrap/cache database \
     && chown -R www-data:www-data .
@@ -25,8 +25,7 @@ RUN mkdir -p database \
 RUN php artisan key:generate --force \
     && php artisan storage:link --force \
     && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+    && php artisan route:cache
 
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
