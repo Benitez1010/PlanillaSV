@@ -25,7 +25,7 @@
 <body>
     <div class="header">
         <h1>Grupo NSV S.A. de C.V</h1>
-        <p>NIT: 0614-120197-001-7</p>
+        <p>NIT: 0614-27081-105-3</p>
         <p>{{ $direccion ?? 'San Salvador, El Salvador' }}</p>
     </div>
 
@@ -34,7 +34,6 @@
     <table class="info">
         <tr><td class="label">Empleado:</td><td>{{ $detail->employee->nombre_completo }}</td></tr>
         <tr><td class="label">Período:</td><td>{{ $payroll->periodo }}</td></tr>
-        <tr><td class="label">Fecha de Pago:</td><td>{{ $payroll->fecha_generacion->format('d/m/Y') }}</td></tr>
         <tr><td class="label">Salario Nominal:</td><td>${{ number_format($detail->salario_base, 2) }}</td></tr>
     </table>
 
@@ -49,14 +48,20 @@
         </tr>
         @if ($detail->pago_horas_normales > 0)
         <tr>
-            <td colspan="2">Horas Normales (Diurnas + Nocturnas)</td>
+            <td colspan="2">Recargo Nocturno (25%) — {{ number_format($detail->horas_normales_nocturnas) }} h</td>
             <td class="right">${{ number_format($detail->pago_horas_normales, 2) }}</td>
         </tr>
         @endif
-        @if ($detail->pago_horas_extras > 0)
+        @if ($detail->horas_extra_diurnas > 0)
         <tr>
-            <td colspan="2">Horas Extras</td>
-            <td class="right">${{ number_format($detail->pago_horas_extras, 2) }}</td>
+            <td colspan="2">Horas Extra Diurnas (×2.0) — {{ number_format($detail->horas_extra_diurnas) }} h</td>
+            <td class="right">${{ number_format($detail->horas_extra_diurnas * ($detail->salario_base / 240) * 2.0, 2) }}</td>
+        </tr>
+        @endif
+        @if ($detail->horas_extra_nocturnas > 0)
+        <tr>
+            <td colspan="2">Horas Extra Nocturnas (×2.25) — {{ number_format($detail->horas_extra_nocturnas) }} h</td>
+            <td class="right">${{ number_format($detail->horas_extra_nocturnas * ($detail->salario_base / 240) * 2.25, 2) }}</td>
         </tr>
         @endif
         @if ($detail->bono_quincena25 > 0)
@@ -79,7 +84,7 @@
         @endif
         @if ($detail->subsidio_incapacidad > 0)
         <tr>
-            <td colspan="2">Subsidio por Incapacidad (75% primeros 3 días)</td>
+            <td colspan="2">Subsidio ISSS (75% primeros 3 días)</td>
             <td class="right">${{ number_format($detail->subsidio_incapacidad, 2) }}</td>
         </tr>
         @endif
@@ -97,11 +102,24 @@
             <th colspan="2">DEDUCCIONES</th>
             <th class="right">Monto</th>
         </tr>
-        @if ($detail->descuento_ausencias > 0)
-        <tr>
-            <td colspan="2">Descuento por Ausencias</td>
-            <td class="right">${{ number_format($detail->descuento_ausencias, 2) }}</td>
-        </tr>
+        @if (count($ausencias) > 0)
+            @foreach ($ausencias as $a)
+                @php
+                    $dias = !empty($a->dias) ? count($a->dias) : 0;
+                    if ($dias === 0) {
+                        $inicio = \Carbon\Carbon::parse($a->fecha_inicio);
+                        $fin = \Carbon\Carbon::parse($a->fecha_fin);
+                        for ($d = $inicio->copy(); $d <= $fin; $d->addDay()) {
+                            if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) $dias++;
+                        }
+                    }
+                    $monto = $dias * $salarioDiario;
+                @endphp
+                <tr>
+                    <td colspan="2">{{ $a->tipo }} — {{ $dias }} día(s)</td>
+                    <td class="right">${{ number_format($monto, 2) }}</td>
+                </tr>
+            @endforeach
         @endif
         <tr>
             <td colspan="2">ISSS (3%)</td>

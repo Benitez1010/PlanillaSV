@@ -138,12 +138,22 @@ class PayrollCalculator
             $inicioPeriodo = max($inicio, "{$periodo}-01");
             $finPeriodo = min($fin, "{$periodo}-31");
 
-            // Count only business days (Monday-Friday)
             $diasLaborales = 0;
-            for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
-                // dayOfWeek: 1=Monday, 2=Tuesday, ..., 5=Friday, 6=Saturday, 0=Sunday
-                if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
-                    $diasLaborales++;
+
+            if (!empty($a->dias)) {
+                // Use individual dates when available
+                foreach ($a->dias as $fechaStr) {
+                    $fecha = \Carbon\Carbon::parse($fechaStr);
+                    if ($fecha->between($inicioPeriodo, $finPeriodo) && $fecha->dayOfWeek >= 1 && $fecha->dayOfWeek <= 5) {
+                        $diasLaborales++;
+                    }
+                }
+            } else {
+                // Fallback: count weekdays within range (legacy data)
+                for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
+                    if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
+                        $diasLaborales++;
+                    }
                 }
             }
 
@@ -153,10 +163,19 @@ class PayrollCalculator
                 case 'Injustificada':
                     $totalDescuento += $diasLaborales * $salarioDiario;
                     $diasInjustificados += $diasLaborales;
-                    // Track unique weeks for seventh-day calculation (only business days)
-                    for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
-                        if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
-                            $semana = $d->isoWeekYear() . '-W' . $d->isoWeek();
+                    // Track unique weeks for seventh-day calculation
+                    $fechas = !empty($a->dias) ? $a->dias : [];
+                    if (empty($fechas)) {
+                        for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
+                            if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
+                                $fechas[] = $d->format('Y-m-d');
+                            }
+                        }
+                    }
+                    foreach ($fechas as $fechaStr) {
+                        $fecha = \Carbon\Carbon::parse($fechaStr);
+                        if ($fecha->dayOfWeek >= 1 && $fecha->dayOfWeek <= 5) {
+                            $semana = $fecha->isoWeekYear() . '-W' . $fecha->isoWeek();
                             $semanasAfectadas[$semana] = true;
                         }
                     }

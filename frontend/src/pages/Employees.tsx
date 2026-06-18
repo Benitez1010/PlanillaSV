@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form'
 import { employeeApi } from '../services/api'
 import { Pencil, Trash2, Plus, X, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmModal from '../components/ConfirmModal'
+import Modal from '../components/Modal'
 
 interface Employee {
   id?: number
@@ -31,7 +33,9 @@ export default function Employees() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [loading, setLoading] = useState(true)
   const [backendErrors, setBackendErrors] = useState<Record<string, string[]>>({})
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Employee>()
 
   const loadEmployees = () => {
@@ -41,7 +45,8 @@ export default function Employees() {
     }).then(res => setEmployees(res.data))
   }
 
-  useEffect(() => { loadEmployees() }, [])
+  useEffect(() => { loadEmployees(); setLoading(false) }, [])
+
   useEffect(() => { const t = setTimeout(loadEmployees, 300); return () => clearTimeout(t) }, [search, filtroEstado])
 
   const onSubmit = async (data: Employee) => {
@@ -88,13 +93,14 @@ export default function Employees() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar empleado?')) return
     try {
       await employeeApi.delete(id)
       toast.success('Empleado eliminado')
       loadEmployees()
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Error al eliminar empleado')
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -105,6 +111,14 @@ export default function Employees() {
     setShowModal(true)
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
@@ -113,7 +127,7 @@ export default function Employees() {
           <select
             value={filtroEstado}
             onChange={e => setFiltroEstado(e.target.value)}
-            className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+            className="px-3 py-2.5 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200 text-sm"
           >
             <option value="">Todos los estados</option>
             <option value="activo">Activos</option>
@@ -125,7 +139,7 @@ export default function Employees() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar empleado..."
-              className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full sm:w-64 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full sm:w-64 hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200"
             />
           </div>
           <button
@@ -137,70 +151,68 @@ export default function Employees() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-primary">
-                {editingId ? 'Editar Empleado' : 'Nuevo Empleado'}
-              </h3>
-              <button onClick={() => { setShowModal(false); setEditingId(null); setBackendErrors({}) }} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditingId(null); setBackendErrors({}) }}>
+        <div className="p-6 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-primary">
+              {editingId ? 'Editar Empleado' : 'Nuevo Empleado'}
+            </h3>
+            <button onClick={() => { setShowModal(false); setEditingId(null); setBackendErrors({}) }} className="text-gray-400 hover:text-gray-600">
+              <X size={24} />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
+                <input {...register('nombres', { required: true })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
+                {errors.nombres && <span className="text-red-500 text-xs">Requerido</span>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
+                <input {...register('apellidos', { required: true })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
+                {errors.apellidos && <span className="text-red-500 text-xs">Requerido</span>}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Salario Nominal ($)</label>
+              <input type="number" step="0.01" {...register('salario_nominal', { required: true, min: 0 })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
+              {backendErrors.salario_nominal && (
+                <span className="text-red-500 text-xs block mt-1">{backendErrors.salario_nominal[0]}</span>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Ingreso</label>
+              <input type="date" max={today} {...register('fecha_ingreso', { required: true })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
+              {backendErrors.fecha_ingreso && (
+                <span className="text-red-500 text-xs block mt-1">{backendErrors.fecha_ingreso[0]}</span>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select {...register('estado')}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="submit"
+                className="flex-1 bg-secondary text-white py-2.5 rounded-lg hover:bg-accent transition-all duration-200 font-medium shadow-md">
+                {editingId ? 'Actualizar' : 'Guardar'}
+              </button>
+              <button type="button" onClick={() => { setShowModal(false); setEditingId(null); setBackendErrors({}) }}
+                className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancelar
               </button>
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
-                  <input {...register('nombres', { required: true })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                  {errors.nombres && <span className="text-red-500 text-xs">Requerido</span>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
-                  <input {...register('apellidos', { required: true })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                  {errors.apellidos && <span className="text-red-500 text-xs">Requerido</span>}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Salario Nominal ($)</label>
-                <input type="number" step="0.01" {...register('salario_nominal', { required: true, min: 0 })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                {backendErrors.salario_nominal && (
-                  <span className="text-red-500 text-xs block mt-1">{backendErrors.salario_nominal[0]}</span>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Ingreso</label>
-                <input type="date" max={today} {...register('fecha_ingreso', { required: true })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                {backendErrors.fecha_ingreso && (
-                  <span className="text-red-500 text-xs block mt-1">{backendErrors.fecha_ingreso[0]}</span>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                <select {...register('estado')}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit"
-                  className="flex-1 bg-secondary text-white py-2.5 rounded-lg hover:bg-accent transition-all duration-200 font-medium shadow-md">
-                  {editingId ? 'Actualizar' : 'Guardar'}
-                </button>
-                <button type="button" onClick={() => { setShowModal(false); setEditingId(null); setBackendErrors({}) }}
-                  className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
+          </form>
         </div>
-      )}
+      </Modal>
 
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -217,7 +229,7 @@ export default function Employees() {
             </thead>
             <tbody>
               {employees.map(e => (
-                <tr key={e.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-all duration-200">
+                <tr key={e.id} className="border-t border-gray-50 hover:bg-primary/5 hover:shadow-sm transition-all duration-200">
                   <td className="p-4 font-medium">{e.nombres}</td>
                   <td className="p-4 text-gray-600">{e.apellidos}</td>
                   <td className="p-4 text-right font-medium">{formatCurrency(e.salario_nominal)}</td>
@@ -236,7 +248,7 @@ export default function Employees() {
                       className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors">
                       <Pencil size={16} />
                     </button>
-                    <button onClick={() => handleDelete(e.id!)}
+                    <button onClick={() => setConfirmDelete(e.id!)}
                       className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors ml-1">
                       <Trash2 size={16} />
                     </button>
@@ -254,6 +266,15 @@ export default function Employees() {
           </table>
         </div>
       </div>
+
+      {confirmDelete !== null && (
+        <ConfirmModal
+          message="¿Eliminar empleado? Esta acción no se puede deshacer."
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+          confirmLabel="Sí, eliminar"
+        />
+      )}
     </div>
   )
 }

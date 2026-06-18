@@ -12,6 +12,7 @@ class Absence extends Model
         'tipo',
         'fecha_inicio',
         'fecha_fin',
+        'dias',
         'estado',
     ];
 
@@ -20,6 +21,7 @@ class Absence extends Model
         return [
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
+            'dias' => 'array',
         ];
     }
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { payrollApi, employeeApi } from '../services/api'
 import { FileSpreadsheet, Eye, Calculator, X, ChevronDown, RefreshCw, Trash2, Lock, Search, Printer } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmModal from '../components/ConfirmModal'
+import Modal from '../components/Modal'
 
 interface PayrollDetail {
   id: number
@@ -49,28 +51,6 @@ interface Payroll {
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
-
-function ConfirmModal({ message, onConfirm, onCancel, loading }: {
-  message: string; onConfirm: () => void; onCancel: () => void; loading?: boolean
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
-        <p className="text-gray-700 mb-6">{message}</p>
-        <div className="flex gap-3">
-          <button onClick={onConfirm} disabled={loading}
-            className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-all duration-200">
-            {loading ? 'Procesando...' : 'Sí, confirmar'}
-          </button>
-          <button onClick={onCancel}
-            className="px-6 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function Payrolls() {
   const [payrolls, setPayrolls] = useState<Payroll[]>([])
@@ -203,7 +183,7 @@ export default function Payrolls() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Buscar período..."
-                  className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full sm:w-48 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full sm:w-48 hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200"
                 />
               </div>
               <button
@@ -236,75 +216,73 @@ export default function Payrolls() {
         />
       )}
 
-      {showGenerate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-primary">Generar Planilla</h3>
-              <button onClick={() => setShowGenerate(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
-              </button>
+      <Modal open={showGenerate} onClose={() => setShowGenerate(false)}>
+        <div className="p-6 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-primary">Generar Planilla</h3>
+            <button onClick={() => setShowGenerate(false)} className="text-gray-400 hover:text-gray-600">
+              <X size={24} />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Período (YYYY-MM)</label>
+              <input type="month" value={periodo} onChange={e => {
+                setPeriodo(e.target.value)
+                const mes = parseInt(e.target.value.split('-')[1])
+                const anio = parseInt(e.target.value.split('-')[0])
+                const ids = employees.filter((emp: any) => {
+                  const ing = new Date(emp.fecha_ingreso)
+                  return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                }).map((e: any) => e.id)
+                setVacacionesIds(ids)
+              }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
             </div>
-            <div className="space-y-4">
+
+            {employees.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Período (YYYY-MM)</label>
-                <input type="month" value={periodo} onChange={e => {
-                  setPeriodo(e.target.value)
-                  const mes = parseInt(e.target.value.split('-')[1])
-                  const anio = parseInt(e.target.value.split('-')[0])
-                  const ids = employees.filter((emp: any) => {
+                <label className="block text-sm font-medium text-gray-700 mb-2">Vacaciones por Aniversario</label>
+                <div className="max-h-40 overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3">
+                  {employees.filter((emp: any) => {
+                    const mes = parseInt(periodo.split('-')[1])
                     const ing = new Date(emp.fecha_ingreso)
-                    return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
-                  }).map((e: any) => e.id)
-                  setVacacionesIds(ids)
-                }}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-              </div>
-
-              {employees.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Vacaciones por Aniversario</label>
-                  <div className="max-h-40 overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3">
-                    {employees.filter((emp: any) => {
-                      const mes = parseInt(periodo.split('-')[1])
-                      const ing = new Date(emp.fecha_ingreso)
-                      return ing.getMonth() + 1 === mes
-                    }).map((emp: any) => (
-                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={vacacionesIds.includes(emp.id)}
-                          onChange={() => toggleVacacion(emp.id)}
-                          className="rounded text-secondary focus:ring-secondary"
-                        />
-                        <span className="text-sm">{emp.nombres} {emp.apellidos}</span>
-                      </label>
-                    ))}
-                    {employees.filter((emp: any) => {
-                      const mes = parseInt(periodo.split('-')[1])
-                      const ing = new Date(emp.fecha_ingreso)
-                      return ing.getMonth() + 1 === mes
-                    }).length === 0 && (
-                      <p className="text-xs text-gray-400">Ningún empleado cumple años este mes</p>
-                    )}
-                  </div>
+                    return ing.getMonth() + 1 === mes
+                  }).map((emp: any) => (
+                    <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={vacacionesIds.includes(emp.id)}
+                        onChange={() => toggleVacacion(emp.id)}
+                        className="rounded text-secondary focus:ring-secondary"
+                      />
+                      <span className="text-sm">{emp.nombres} {emp.apellidos}</span>
+                    </label>
+                  ))}
+                  {employees.filter((emp: any) => {
+                    const mes = parseInt(periodo.split('-')[1])
+                    const ing = new Date(emp.fecha_ingreso)
+                    return ing.getMonth() + 1 === mes
+                  }).length === 0 && (
+                    <p className="text-xs text-gray-400">Ningún empleado cumple años este mes</p>
+                  )}
                 </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button onClick={handleGenerate} disabled={generating}
-                  className="flex-1 bg-secondary text-white py-2.5 rounded-lg hover:bg-accent disabled:opacity-50 transition-all duration-200 font-medium shadow-md">
-                  {generating ? 'Generando...' : 'Generar'}
-                </button>
-                <button onClick={() => setShowGenerate(false)}
-                  className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  Cancelar
-                </button>
               </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={handleGenerate} disabled={generating}
+                className="flex-1 bg-secondary text-white py-2.5 rounded-lg hover:bg-accent disabled:opacity-50 transition-all duration-200 font-medium shadow-md">
+                {generating ? 'Generando...' : 'Generar'}
+              </button>
+              <button onClick={() => setShowGenerate(false)}
+                className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       {selected ? (
         <div>
@@ -396,7 +374,7 @@ export default function Payrolls() {
                 </thead>
                 <tbody>
                   {selected.details?.map(d => (
-                    <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-all duration-200">
+                    <tr key={d.id} className="border-t border-gray-50 hover:bg-primary/5 hover:shadow-sm transition-all duration-200">
                       <td className="p-3 font-medium">{d.employee?.nombres} {d.employee?.apellidos}</td>
                       <td className="p-3 text-right">{formatCurrency(d.salario_base)}</td>
                       <td className="p-3 text-right text-emerald-600">{d.bono_quincena25 > 0 ? formatCurrency(d.bono_quincena25) : '—'}</td>

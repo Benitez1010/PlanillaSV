@@ -20,6 +20,10 @@ class WorkLogController extends Controller
             $query->where('estado', $request->estado);
         }
 
+        if ($request->periodo) {
+            $query->where('periodo', $request->periodo);
+        }
+
         if ($request->search) {
             $search = $request->search;
             $query->whereHas('employee', function ($q) use ($search) {

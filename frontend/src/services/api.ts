@@ -42,17 +42,21 @@ export const employeeApi = {
 }
 
 export const workLogApi = {
-  getAll: (params?: { employee_id?: number; estado?: string; search?: string }) =>
+  getAll: (params?: { employee_id?: number; estado?: string; search?: string; periodo?: string }) =>
     api.get('/work-logs', { params }),
+  getById: (id: number) => api.get(`/work-logs/${id}`),
   create: (data: any) => api.post('/work-logs', data),
+  update: (id: number, data: any) => api.put(`/work-logs/${id}`, data),
   approve: (id: number) => api.patch(`/work-logs/${id}/approve`),
   delete: (id: number) => api.delete(`/work-logs/${id}`),
 }
 
 export const absenceApi = {
-  getAll: (params?: { search?: string; tipo?: string; estado?: string }) =>
+  getAll: (params?: { search?: string; tipo?: string; estado?: string; periodo?: string }) =>
     api.get('/absences', { params }),
+  getById: (id: number) => api.get(`/absences/${id}`),
   create: (data: any) => api.post('/absences', data),
+  update: (id: number, data: any) => api.put(`/absences/${id}`, data),
   approve: (id: number) => api.patch(`/absences/${id}/approve`),
   delete: (id: number) => api.delete(`/absences/${id}`),
 }

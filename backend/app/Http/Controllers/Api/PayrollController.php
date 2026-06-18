@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Absence;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
@@ -248,9 +249,19 @@ class PayrollController extends Controller
     {
         $detail = $payroll->details()->where('employee_id', $employee->id)->with('employee')->firstOrFail();
 
+        $ausencias = Absence::aprobados()
+            ->porEmpleado($employee->id)
+            ->where('fecha_inicio', '<=', "{$payroll->periodo}-31")
+            ->where('fecha_fin', '>=', "{$payroll->periodo}-01")
+            ->get();
+
+        $salarioDiario = $detail->salario_base / 30;
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', [
             'payroll' => $payroll,
             'detail' => $detail,
+            'ausencias' => $ausencias,
+            'salarioDiario' => $salarioDiario,
         ]);
 
         $filename = "boleta_{$employee->nombres}_{$employee->apellidos}_{$payroll->periodo}.pdf";
