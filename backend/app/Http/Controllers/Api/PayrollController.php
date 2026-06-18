@@ -54,7 +54,9 @@ class PayrollController extends Controller
             ], 400);
         }
 
-        $employees = Employee::where('estado', 'activo')->get();
+        $employees = Employee::where('estado', 'activo')
+            ->whereDate('fecha_ingreso', '<=', "{$periodo}-01")
+            ->get();
 
         if ($employees->isEmpty()) {
             return response()->json([
@@ -174,7 +176,9 @@ class PayrollController extends Controller
 
         $vacacionesIds = $validated['vacaciones_ids'] ?? [];
         $periodo = $payroll->periodo;
-        $employees = Employee::where('estado', 'activo')->get();
+        $employees = Employee::where('estado', 'activo')
+            ->whereDate('fecha_ingreso', '<=', "{$periodo}-01")
+            ->get();
 
         $payroll->details()->delete();
 

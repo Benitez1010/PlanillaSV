@@ -26,15 +26,48 @@ const formatDate = (dateStr: string) => {
   return dateStr.split('T')[0]
 }
 
+// Parse date safely without timezone issues
+const parseDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date
+}
+
+const isWeekend = (dateStr: string): boolean => {
+  const date = parseDate(dateStr)
+  const day = date.getDay()
+  return day === 0 || day === 6
+}
+
+const getDayName = (dateStr: string): string => {
+  const date = parseDate(dateStr)
+  const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  return days[date.getDay()]
+}
+
 export default function Absences() {
   const [absences, setAbsences] = useState<Absence[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({})
   const { register, handleSubmit, reset } = useForm()
 
   const loadAbsences = () => {
     absenceApi.getAll({ search: search || undefined }).then(res => setAbsences(res.data))
+  }
+
+  const handleDateChange = (field: 'fecha_inicio' | 'fecha_fin', value: string) => {
+    if (value && isWeekend(value)) {
+      const dayName = getDayName(value)
+      setDateErrors(prev => ({ ...prev, [field]: `No se pueden seleccionar ${dayName}s` }))
+    } else {
+      setDateErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
   }
 
   useEffect(() => {
@@ -45,11 +78,16 @@ export default function Absences() {
   useEffect(() => { const t = setTimeout(loadAbsences, 300); return () => clearTimeout(t) }, [search])
 
   const onSubmit = async (data: any) => {
+    if (Object.keys(dateErrors).length > 0) {
+      toast.error('No se pueden seleccionar sábados ni domingos')
+      return
+    }
     try {
       await absenceApi.create(data)
       toast.success('Ausencia registrada correctamente')
       reset()
       setShowModal(false)
+      setDateErrors({})
       loadAbsences()
     } catch {
       toast.error('Error al registrar ausencia')
@@ -78,9 +116,19 @@ export default function Absences() {
   }
 
   const totalDias = (a: Absence) => {
-    const inicio = new Date(a.fecha_inicio)
-    const fin = new Date(a.fecha_fin)
-    return Math.floor((fin.getTime() - inicio.getTime()) / 86400000) + 1
+    const inicio = parseDate(a.fecha_inicio)
+    const fin = parseDate(a.fecha_fin)
+
+    let count = 0
+    const current = new Date(inicio)
+    while (current <= fin) {
+      const day = current.getDay()
+      if (day >= 1 && day <= 5) { // Monday to Friday
+        count++
+      }
+      current.setDate(current.getDate() + 1)
+    }
+    return count
   }
 
   const tipoBadge = (tipo: string) => {
@@ -120,7 +168,10 @@ export default function Absences() {
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-primary">Registrar Ausencia</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => {
+                setShowModal(false)
+                setDateErrors({})
+              }} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
             </div>
@@ -149,12 +200,16 @@ export default function Absences() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
                   <input type="date" {...register('fecha_inicio', { required: true })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                    onChange={(e) => handleDateChange('fecha_inicio', e.target.value)}
+                    className={`w-full px-3 py-2 border ${dateErrors.fecha_inicio ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none`} />
+                  {dateErrors.fecha_inicio && <p className="text-red-500 text-xs mt-1">{dateErrors.fecha_inicio}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
                   <input type="date" {...register('fecha_fin', { required: true })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                    onChange={(e) => handleDateChange('fecha_fin', e.target.value)}
+                    className={`w-full px-3 py-2 border ${dateErrors.fecha_fin ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none`} />
+                  {dateErrors.fecha_fin && <p className="text-red-500 text-xs mt-1">{dateErrors.fecha_fin}</p>}
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
@@ -162,7 +217,10 @@ export default function Absences() {
                   className="flex-1 bg-secondary text-white py-2.5 rounded-lg hover:bg-accent transition-all duration-200 font-medium shadow-md">
                   Guardar
                 </button>
-                <button type="button" onClick={() => setShowModal(false)}
+                <button type="button" onClick={() => {
+                  setShowModal(false)
+                  setDateErrors({})
+                }}
                   className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   Cancelar
                 </button>

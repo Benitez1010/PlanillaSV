@@ -34,7 +34,7 @@ class WorkLogController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required|exists:employees,id|unique:work_logs,employee_id,NULL,id,periodo,' . $request->periodo,
             'periodo' => 'required|string|max:7',
             'hora_normal_diurna' => 'sometimes|numeric|min:0',
             'hora_normal_nocturna' => 'sometimes|numeric|min:0',

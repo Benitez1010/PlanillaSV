@@ -33,14 +33,20 @@ export default function WorkLogs() {
     defaultValues: { hora_normal_diurna: 0, hora_normal_nocturna: 0, extra_diurna: 0, extra_nocturna: 0 }
   })
   const selectedEmployeeId = useWatch<any>({ control, name: 'employee_id' })
+  const nocturnaValue = useWatch<any>({ control, name: 'hora_normal_nocturna' })
 
   useEffect(() => {
     const hasValue = selectedEmployeeId && selectedEmployeeId !== ''
-    setValue('hora_normal_diurna', hasValue ? 240 : 0)
-    setValue('hora_normal_nocturna', 0)
-    setValue('extra_diurna', 0)
-    setValue('extra_nocturna', 0)
-  }, [selectedEmployeeId, setValue])
+    if (hasValue) {
+      const diurnaValue = Math.max(0, 240 - (nocturnaValue || 0))
+      setValue('hora_normal_diurna', diurnaValue)
+    } else {
+      setValue('hora_normal_diurna', 0)
+      setValue('hora_normal_nocturna', 0)
+      setValue('extra_diurna', 0)
+      setValue('extra_nocturna', 0)
+    }
+  }, [selectedEmployeeId, nocturnaValue, setValue])
 
   const loadWorkLogs = () => {
     workLogApi.getAll({ search: search || undefined }).then(res => setWorkLogs(res.data))
@@ -159,6 +165,10 @@ export default function WorkLogs() {
                   <input type="number" step="0.5" {...register('extra_nocturna')}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
                 </div>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                <div className="font-medium mb-1">📌 Recordatorio</div>
+                <div>No olvide registrar las ausencias del período en el módulo correspondiente.</div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit"

@@ -137,30 +137,40 @@ class PayrollCalculator
 
             $inicioPeriodo = max($inicio, "{$periodo}-01");
             $finPeriodo = min($fin, "{$periodo}-31");
-            $dias = (int) $inicioPeriodo->diffInDays($finPeriodo) + 1;
 
-            if ($dias <= 0) continue;
+            // Count only business days (Monday-Friday)
+            $diasLaborales = 0;
+            for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
+                // dayOfWeek: 1=Monday, 2=Tuesday, ..., 5=Friday, 6=Saturday, 0=Sunday
+                if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
+                    $diasLaborales++;
+                }
+            }
+
+            if ($diasLaborales <= 0) continue;
 
             switch ($a->tipo) {
                 case 'Injustificada':
-                    $totalDescuento += $dias * $salarioDiario;
-                    $diasInjustificados += $dias;
-                    // Track unique weeks for seventh-day calculation
+                    $totalDescuento += $diasLaborales * $salarioDiario;
+                    $diasInjustificados += $diasLaborales;
+                    // Track unique weeks for seventh-day calculation (only business days)
                     for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
-                        $semana = $d->isoWeekYear() . '-W' . $d->isoWeek();
-                        $semanasAfectadas[$semana] = true;
+                        if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
+                            $semana = $d->isoWeekYear() . '-W' . $d->isoWeek();
+                            $semanasAfectadas[$semana] = true;
+                        }
                     }
                     break;
                 case 'Permiso sin goce de sueldo':
-                    $totalDescuento += $dias * $salarioDiario;
-                    $diasPermiso += $dias;
+                    $totalDescuento += $diasLaborales * $salarioDiario;
+                    $diasPermiso += $diasLaborales;
                     break;
                 case 'Incapacidad ISSS':
-                    $diasPago = min($dias, 3);
+                    $diasPago = min($diasLaborales, 3);
                     $subsidioIncapacidad += $diasPago * $salarioDiario * 0.75;
-                    $diasSinPago = $dias - $diasPago;
+                    $diasSinPago = $diasLaborales - $diasPago;
                     $totalDescuento += $diasSinPago * $salarioDiario;
-                    $diasIncapacidad += $dias;
+                    $diasIncapacidad += $diasLaborales;
                     break;
             }
         }

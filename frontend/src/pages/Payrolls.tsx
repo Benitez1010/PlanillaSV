@@ -384,7 +384,7 @@ export default function Payrolls() {
                     <th className="text-right p-3 font-medium text-gray-500">Bono25</th>
                     <th className="text-right p-3 font-medium text-gray-500">Aguinaldo</th>
                     <th className="text-right p-3 font-medium text-gray-500">Vacaciones</th>
-                    <th className="text-right p-3 font-medium text-gray-500">Horas Normales</th>
+                    <th className="text-right p-3 font-medium text-gray-500">Horas Nocturnas</th>
                     <th className="text-right p-3 font-medium text-gray-500">Horas Extras</th>
                     <th className="text-right p-3 font-medium text-gray-500">ISSS</th>
                     <th className="text-right p-3 font-medium text-gray-500">AFP</th>
