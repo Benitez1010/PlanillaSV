@@ -1,0 +1,11 @@
+**/node_modules
+**/vendor
+**/.git
+**/storage/framework/cache/data
+**/storage/framework/sessions
+**/storage/framework/views
+**/storage/logs
+**/storage/debugbar
+.git
+README.md
+docker-compose.yml
