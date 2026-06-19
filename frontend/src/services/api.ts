@@ -49,10 +49,21 @@ export const workLogApi = {
   update: (id: number, data: any) => api.put(`/work-logs/${id}`, data),
   approve: (id: number) => api.patch(`/work-logs/${id}/approve`),
   delete: (id: number) => api.delete(`/work-logs/${id}`),
+  bulkCreate: (periodo: string) => api.post('/work-logs/bulk', { periodo }),
+  approveAll: (periodo?: string) => api.patch('/work-logs/approve-all', { periodo }),
+  discardAll: (periodo?: string) => api.delete('/work-logs/discard-all', { data: { periodo } }),
+  downloadTemplate: () => api.get('/work-logs/template', { responseType: 'blob' }),
+  import: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/work-logs/import', fd, {
+      headers: { 'Content-Type': null },
+    })
+  },
 }
 
 export const absenceApi = {
-  getAll: (params?: { search?: string; tipo?: string; estado?: string; periodo?: string }) =>
+  getAll: (params?: { search?: string; tipo?: string; estado?: string; periodo?: string; employee_id?: number }) =>
     api.get('/absences', { params }),
   getById: (id: number) => api.get(`/absences/${id}`),
   create: (data: any) => api.post('/absences', data),

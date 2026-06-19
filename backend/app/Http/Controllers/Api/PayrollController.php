@@ -8,6 +8,7 @@ use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\WorkLog;
 use App\Services\PayrollCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -55,8 +56,9 @@ class PayrollController extends Controller
             ], 400);
         }
 
+        $lastDay = Carbon::createFromFormat('Y-m', $periodo)->endOfMonth()->format('Y-m-d');
         $employees = Employee::where('estado', 'activo')
-            ->whereDate('fecha_ingreso', '<=', "{$periodo}-01")
+            ->whereDate('fecha_ingreso', '<=', $lastDay)
             ->get();
 
         if ($employees->isEmpty()) {
@@ -177,8 +179,9 @@ class PayrollController extends Controller
 
         $vacacionesIds = $validated['vacaciones_ids'] ?? [];
         $periodo = $payroll->periodo;
+        $lastDay = Carbon::createFromFormat('Y-m', $periodo)->endOfMonth()->format('Y-m-d');
         $employees = Employee::where('estado', 'activo')
-            ->whereDate('fecha_ingreso', '<=', "{$periodo}-01")
+            ->whereDate('fecha_ingreso', '<=', $lastDay)
             ->get();
 
         $payroll->details()->delete();

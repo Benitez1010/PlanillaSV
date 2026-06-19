@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { employeeApi, workLogApi } from '../services/api'
-import { Plus, X, Search, CheckCircle, Trash2, Pencil, ExternalLink } from 'lucide-react'
+import { employeeApi, workLogApi, absenceApi } from '../services/api'
+import { Plus, X, Search, CheckCircle, Trash2, Pencil, ExternalLink, Upload, Download, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ConfirmModal from '../components/ConfirmModal'
@@ -38,6 +38,11 @@ export default function WorkLogs() {
   const [search, setSearch] = useState('')
   const [filterPeriodo, setFilterPeriodo] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [bulkLoading, setBulkLoading] = useState(false)
+  const [approveAllLoading, setApproveAllLoading] = useState(false)
+  const [discardAllLoading, setDiscardAllLoading] = useState(false)
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const prevNocturna = useRef<number>(0)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -47,24 +52,37 @@ export default function WorkLogs() {
       window.history.replaceState({}, document.title)
     }
   }, [location.state])
+
   const { register, handleSubmit, reset, setValue, control } = useForm<any>({
     defaultValues: { hora_normal_diurna: 0, hora_normal_nocturna: 0, extra_diurna: 0, extra_nocturna: 0 }
   })
   const selectedEmployeeId = useWatch<any>({ control, name: 'employee_id' })
+  const periodoValue = useWatch<any>({ control, name: 'periodo' })
   const nocturnaValue = useWatch<any>({ control, name: 'hora_normal_nocturna' })
 
   useEffect(() => {
-    const hasValue = selectedEmployeeId && selectedEmployeeId !== ''
-    if (hasValue) {
-      const diurnaValue = Math.max(0, 240 - (nocturnaValue || 0))
-      setValue('hora_normal_diurna', diurnaValue)
-    } else {
-      setValue('hora_normal_diurna', 0)
-      setValue('hora_normal_nocturna', 0)
-      setValue('extra_diurna', 0)
-      setValue('extra_nocturna', 0)
+    if (selectedEmployeeId && periodoValue && !editingId) {
+      absenceApi.getAll({ employee_id: Number(selectedEmployeeId), periodo: periodoValue, estado: 'Aprobada' })
+        .then(res => {
+          const days = res.data.reduce((sum: number, a: any) => sum + (a.dias?.length || 0), 0)
+          const suggested = Math.max(0, 240 - days * 8)
+          setValue('hora_normal_diurna', suggested)
+          prevNocturna.current = 0
+        })
+        .catch(() => {})
     }
-  }, [selectedEmployeeId, nocturnaValue, setValue])
+  }, [selectedEmployeeId, periodoValue, editingId, setValue])
+
+  useEffect(() => {
+    const current = Number(nocturnaValue) || 0
+    const prev = prevNocturna.current
+    if (current !== prev) {
+      const diurna = Number(document.querySelector<HTMLInputElement>('input[name="hora_normal_diurna"]')?.value) || 0
+      const nuevo = Math.max(0, Math.min(240, diurna - (current - prev)))
+      setValue('hora_normal_diurna', nuevo)
+      prevNocturna.current = current
+    }
+  }, [nocturnaValue, setValue])
 
   const getParams = () => ({
     search: search || undefined,
@@ -97,6 +115,7 @@ export default function WorkLogs() {
       extra_diurna: 0,
       extra_nocturna: 0,
     })
+    prevNocturna.current = 0
     setShowModal(true)
   }
 
@@ -113,6 +132,7 @@ export default function WorkLogs() {
         extra_diurna: w.extra_diurna,
         extra_nocturna: w.extra_nocturna,
       })
+      prevNocturna.current = Number(w.hora_normal_nocturna) || 0
       setShowModal(true)
     } catch {
       toast.error('Error al cargar registro de horas')
@@ -163,6 +183,80 @@ export default function WorkLogs() {
     }
   }
 
+  const handleBulkCreate = async () => {
+    setConfirmBulk(false)
+    const p = filterPeriodo || today
+    setBulkLoading(true)
+    try {
+      const res = await workLogApi.bulkCreate(p)
+      toast.success(`${res.data.total_created} registros creados${res.data.total_skipped ? `, ${res.data.total_skipped} saltados` : ''}`)
+      loadWorkLogs()
+    } catch {
+      toast.error('Error al crear registros masivos')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleApproveAll = async () => {
+    setApproveAllLoading(true)
+    try {
+      const res = await workLogApi.approveAll(filterPeriodo || undefined)
+      toast.success(`${res.data.aprobados} registros aprobados`)
+      loadWorkLogs()
+    } catch {
+      toast.error('Error al aprobar')
+    } finally {
+      setApproveAllLoading(false)
+    }
+  }
+
+  const handleDiscardAll = async () => {
+    setDiscardAllLoading(true)
+    try {
+      const res = await workLogApi.discardAll(filterPeriodo || undefined)
+      toast.success(`${res.data.descartados} registros descartados`)
+      loadWorkLogs()
+    } catch {
+      toast.error('Error al descartar')
+    } finally {
+      setDiscardAllLoading(false)
+    }
+  }
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await workLogApi.downloadTemplate()
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla_horas.csv'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Error al descargar plantilla')
+    }
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const res = await workLogApi.import(file)
+      const msg = `${res.data.created} registros importados`
+      const errs = res.data.errors || []
+      toast.success(errs.length ? msg + `. ${errs.length} errores` : msg)
+      if (errs.length) {
+        errs.slice(0, 5).forEach((err: string) => toast.error(err, { duration: 5000 }))
+      }
+      loadWorkLogs()
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.error || err.response?.data?.message || ''
+      toast.error(serverMsg || 'Error al importar archivo')
+    }
+    e.target.value = ''
+  }
+
   const totalHoras = (w: WorkLog) =>
     Number(w.hora_normal_diurna) + Number(w.hora_normal_nocturna) +
     Number(w.extra_diurna) + Number(w.extra_nocturna)
@@ -191,13 +285,34 @@ export default function WorkLogs() {
               className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg w-full sm:w-64 hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200"
             />
           </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center justify-center gap-2 bg-secondary text-white px-5 py-2.5 rounded-lg hover:bg-accent transition-all duration-200 shadow-md"
-          >
-            <Plus size={20} /> Registrar Horas
-          </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button onClick={() => setConfirmBulk(true)} disabled={bulkLoading}
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/80 transition-all duration-200 shadow-md disabled:opacity-50">
+          <Users size={18} /> {bulkLoading ? 'Creando...' : 'Aplicar a Todos'}
+        </button>
+        <button onClick={handleApproveAll} disabled={approveAllLoading}
+          className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-lg hover:bg-accent transition-all duration-200 shadow-md disabled:opacity-50">
+          <CheckCircle size={18} /> {approveAllLoading ? 'Aprobando...' : 'Aprobar Todas'}
+        </button>
+        <button onClick={handleDiscardAll} disabled={discardAllLoading}
+          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md disabled:opacity-50">
+          <Trash2 size={18} /> {discardAllLoading ? 'Descartando...' : 'Descartar Todas'}
+        </button>
+        <button onClick={handleDownloadTemplate}
+          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md">
+          <Download size={18} /> Plantilla CSV
+        </button>
+        <label className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md cursor-pointer">
+          <Upload size={18} /> Importar archivo
+          <input type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleImport} className="hidden" />
+        </label>
+        <button onClick={openCreate}
+          className="flex items-center justify-center gap-2 bg-secondary text-white px-5 py-2 rounded-lg hover:bg-accent transition-all duration-200 shadow-md">
+          <Plus size={20} /> Registrar Horas
+        </button>
       </div>
 
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditingId(null) }}>
@@ -229,22 +344,30 @@ export default function WorkLogs() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hora Normal Diurna</label>
-                <input type="number" step="0.5" {...register('hora_normal_diurna')}
+                <input type="number" step="0.5" min="0" {...register('hora_normal_diurna', { min: 0 })}
+                  onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('El valor no puede ser negativo')}
+                  onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hora Normal Nocturna</label>
-                <input type="number" step="0.5" {...register('hora_normal_nocturna')}
+                <input type="number" step="0.5" min="0" {...register('hora_normal_nocturna', { min: 0 })}
+                  onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('El valor no puede ser negativo')}
+                  onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Extra Diurna</label>
-                <input type="number" step="0.5" {...register('extra_diurna')}
+                <input type="number" step="0.5" min="0" {...register('extra_diurna', { min: 0 })}
+                  onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('El valor no puede ser negativo')}
+                  onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Extra Nocturna</label>
-                <input type="number" step="0.5" {...register('extra_nocturna')}
+                <input type="number" step="0.5" min="0" {...register('extra_nocturna', { min: 0 })}
+                  onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('El valor no puede ser negativo')}
+                  onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg hover:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-200" />
               </div>
             </div>
@@ -347,6 +470,15 @@ export default function WorkLogs() {
           onConfirm={() => handleDelete(confirmDelete)}
           onCancel={() => setConfirmDelete(null)}
           confirmLabel="Sí, descartar"
+        />
+      )}
+
+      {confirmBulk && (
+        <ConfirmModal
+          message={`¿Crear registros de horas para todos los empleados activos en ${filterPeriodo || today}?`}
+          onConfirm={handleBulkCreate}
+          onCancel={() => setConfirmBulk(false)}
+          confirmLabel="Sí, aplicar a todos"
         />
       )}
     </div>

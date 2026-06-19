@@ -21,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('employees', EmployeeController::class);
     Route::get('employees/{employee}/eligible-vacation', [EmployeeController::class, 'eligibleForVacation']);
 
+    Route::post('work-logs/bulk', [WorkLogController::class, 'bulkStore']);
+    Route::patch('work-logs/approve-all', [WorkLogController::class, 'approveAll']);
+    Route::delete('work-logs/discard-all', [WorkLogController::class, 'discardAll']);
+    Route::get('work-logs/template', [WorkLogController::class, 'template']);
+    Route::post('work-logs/import', [WorkLogController::class, 'import']);
     Route::apiResource('work-logs', WorkLogController::class);
     Route::patch('work-logs/{work_log}/approve', [WorkLogController::class, 'approve']);
 

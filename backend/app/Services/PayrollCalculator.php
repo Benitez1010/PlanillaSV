@@ -228,7 +228,9 @@ class PayrollCalculator
         $descuentoAusencias = $ausencias['total_descuento'] ?? 0;
         $subsidioIncapacidad = $ausencias['subsidio_incapacidad'] ?? 0;
 
-        $baseAjustada = $salarioNominal - $descuentoAusencias + $subsidioIncapacidad;
+        $horasNormales = ($horas['hora_normal_diurna'] ?? 0) + ($horas['hora_normal_nocturna'] ?? 0);
+        $factorHoras = min($horasNormales / 240, 1);
+        $baseAjustada = $salarioNominal * $factorHoras - $descuentoAusencias + $subsidioIncapacidad;
         $salarioBruto = $baseAjustada + $bonosSinDescuento + $baseConVacaciones + $pagoHoras['pago_horas_normales'] + $pagoHoras['pago_horas_extras'];
         $baseImponible = $baseAjustada + $baseConVacaciones + $pagoHoras['pago_horas_normales'] + $pagoHoras['pago_horas_extras'];
 

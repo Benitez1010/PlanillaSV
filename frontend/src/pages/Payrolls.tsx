@@ -244,28 +244,25 @@ export default function Payrolls() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Vacaciones por Aniversario</label>
                 <div className="max-h-40 overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3">
-                  {employees.filter((emp: any) => {
+                  {(() => {
                     const mes = parseInt(periodo.split('-')[1])
-                    const ing = new Date(emp.fecha_ingreso)
-                    return ing.getMonth() + 1 === mes
-                  }).map((emp: any) => (
-                    <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={vacacionesIds.includes(emp.id)}
-                        onChange={() => toggleVacacion(emp.id)}
-                        className="rounded text-secondary focus:ring-secondary"
-                      />
-                      <span className="text-sm">{emp.nombres} {emp.apellidos}</span>
-                    </label>
-                  ))}
-                  {employees.filter((emp: any) => {
-                    const mes = parseInt(periodo.split('-')[1])
-                    const ing = new Date(emp.fecha_ingreso)
-                    return ing.getMonth() + 1 === mes
-                  }).length === 0 && (
-                    <p className="text-xs text-gray-400">Ningún empleado cumple años este mes</p>
-                  )}
+                    const anio = parseInt(periodo.split('-')[0])
+                    const elegibles = employees.filter((emp: any) => {
+                      const ing = new Date(emp.fecha_ingreso)
+                      return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                    })
+                    return elegibles.length > 0 ? elegibles.map((emp: any) => (
+                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={vacacionesIds.includes(emp.id)}
+                          onChange={() => toggleVacacion(emp.id)}
+                          className="rounded text-secondary focus:ring-secondary"
+                        />
+                        <span className="text-sm">{emp.nombres} {emp.apellidos}</span>
+                      </label>
+                    )) : <p className="text-xs text-gray-400">Ningún empleado cumple años este mes</p>
+                  })()}
                 </div>
               </div>
             )}
