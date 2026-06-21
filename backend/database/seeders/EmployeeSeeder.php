@@ -55,7 +55,7 @@ class EmployeeSeeder extends Seeder
             [
                 'nombres' => 'Roberto',
                 'apellidos' => 'Castillo',
-                'salario_nominal' => 365.00,
+                'salario_nominal' => 410.00,
                 'fecha_ingreso' => '2025-01-01',
                 'estado' => 'activo',
             ],
