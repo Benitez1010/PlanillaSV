@@ -14,6 +14,8 @@ interface PayrollDetail {
   isr: number
   renta_gravable: number
   total_descuentos: number
+  isss_patronal: number
+  afp_patronal: number
   neto: number
   bono_quincena25: number
   aguinaldo: number
@@ -27,6 +29,8 @@ interface PayrollDetail {
   horas_extra_nocturnas: number
   pago_horas_normales: number
   pago_horas_extras: number
+  pago_horas_extras_diurnas: number
+  pago_horas_extras_nocturnas: number
   employee: {
     id: number
     nombres: string
@@ -361,10 +365,14 @@ export default function Payrolls() {
                     <th className="text-right p-3 font-medium text-gray-500">Vacaciones</th>
                     <th className="text-right p-3 font-medium text-gray-500">Horas Nocturnas</th>
                     <th className="text-right p-3 font-medium text-gray-500">Horas Extras</th>
+                    <th className="text-right p-3 font-medium text-gray-500">H.E. Diurnas</th>
+                    <th className="text-right p-3 font-medium text-gray-500">H.E. Nocturnas</th>
                     <th className="text-right p-3 font-medium text-gray-500">ISSS</th>
                     <th className="text-right p-3 font-medium text-gray-500">AFP</th>
                     <th className="text-right p-3 font-medium text-gray-500">ISR</th>
                     <th className="text-right p-3 font-medium text-gray-500">Desc.</th>
+                    <th className="text-right p-3 font-medium text-gray-500">ISSS Pat.</th>
+                    <th className="text-right p-3 font-medium text-gray-500">AFP Pat.</th>
                     <th className="text-right p-3 font-medium text-gray-500 font-bold">Neto</th>
                     <th className="text-center p-3 font-medium text-gray-500">Boleta</th>
                   </tr>
@@ -379,10 +387,14 @@ export default function Payrolls() {
                       <td className="p-3 text-right text-purple-600">{d.pago_vacaciones > 0 ? formatCurrency(d.pago_vacaciones) : '—'}</td>
                       <td className="p-3 text-right text-gray-500">{d.pago_horas_normales > 0 ? formatCurrency(d.pago_horas_normales) : '—'}</td>
                       <td className="p-3 text-right text-yellow-600">{d.pago_horas_extras > 0 ? formatCurrency(d.pago_horas_extras) : '—'}</td>
+                      <td className="p-3 text-right text-amber-500">{d.pago_horas_extras_diurnas > 0 ? formatCurrency(d.pago_horas_extras_diurnas) : '—'}</td>
+                      <td className="p-3 text-right text-amber-700">{d.pago_horas_extras_nocturnas > 0 ? formatCurrency(d.pago_horas_extras_nocturnas) : '—'}</td>
                       <td className="p-3 text-right text-red-500">{formatCurrency(d.isss)}</td>
                       <td className="p-3 text-right text-orange-500">{formatCurrency(d.afp)}</td>
                       <td className="p-3 text-right text-purple-500">{formatCurrency(d.isr)}</td>
                       <td className="p-3 text-right text-red-400">{formatCurrency(d.total_descuentos)}</td>
+                      <td className="p-3 text-right text-pink-500">{formatCurrency(d.isss_patronal)}</td>
+                      <td className="p-3 text-right text-pink-700">{formatCurrency(d.afp_patronal)}</td>
                       <td className="p-3 text-right font-bold text-secondary">{formatCurrency(d.neto)}</td>
                       <td className="p-3 text-center">
                         <button onClick={() => downloadReceipt(d.employee_id)}
@@ -402,10 +414,14 @@ export default function Payrolls() {
                     <td className="p-3 text-right"></td>
                     <td className="p-3 text-right text-gray-500">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_normales, 0))}</td>
                     <td className="p-3 text-right text-yellow-600">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras, 0))}</td>
+                    <td className="p-3 text-right text-amber-500">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras_diurnas, 0))}</td>
+                    <td className="p-3 text-right text-amber-700">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras_nocturnas, 0))}</td>
                     <td className="p-3 text-right text-red-500">{formatCurrency(selected.total_isss)}</td>
                     <td className="p-3 text-right text-orange-500">{formatCurrency(selected.total_afp)}</td>
                     <td className="p-3 text-right text-purple-500">{formatCurrency(selected.total_isr)}</td>
                     <td className="p-3 text-right text-red-400">{formatCurrency(selected.total_descuentos)}</td>
+                    <td className="p-3 text-right text-pink-500">{formatCurrency(selected.details.reduce((s, d) => s + d.isss_patronal, 0))}</td>
+                    <td className="p-3 text-right text-pink-700">{formatCurrency(selected.details.reduce((s, d) => s + d.afp_patronal, 0))}</td>
                     <td className="p-3 text-right text-secondary">{formatCurrency(selected.total_neto)}</td>
                     <td></td>
                   </tr>

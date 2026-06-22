@@ -55,13 +55,13 @@
         @if ($detail->horas_extra_diurnas > 0)
         <tr>
             <td colspan="2">Horas Extra Diurnas (×2.0) — {{ number_format($detail->horas_extra_diurnas) }} h</td>
-            <td class="right">${{ number_format($detail->horas_extra_diurnas * ($detail->salario_base / 240) * 2.0, 2) }}</td>
+            <td class="right">${{ number_format($detail->pago_horas_extras_diurnas, 2) }}</td>
         </tr>
         @endif
         @if ($detail->horas_extra_nocturnas > 0)
         <tr>
             <td colspan="2">Horas Extra Nocturnas (×2.25) — {{ number_format($detail->horas_extra_nocturnas) }} h</td>
-            <td class="right">${{ number_format($detail->horas_extra_nocturnas * ($detail->salario_base / 240) * 2.25, 2) }}</td>
+            <td class="right">${{ number_format($detail->pago_horas_extras_nocturnas, 2) }}</td>
         </tr>
         @endif
         @if ($detail->bono_quincena25 > 0)
@@ -136,6 +136,25 @@
         <tr class="total">
             <td colspan="2">Total Deducciones</td>
             <td class="right">${{ number_format($detail->total_descuentos, 2) }}</td>
+        </tr>
+    </table>
+
+    <table class="detalle">
+        <tr>
+            <th colspan="2">APORTES PATRONALES</th>
+            <th class="right">Monto</th>
+        </tr>
+        <tr>
+            <td colspan="2">ISSS Patronal (7.50%)</td>
+            <td class="right">${{ number_format($detail->isss_patronal, 2) }}</td>
+        </tr>
+        <tr>
+            <td colspan="2">AFP Patronal (8.75%)</td>
+            <td class="right">${{ number_format($detail->afp_patronal, 2) }}</td>
+        </tr>
+        <tr class="total">
+            <td colspan="2">Total Aportes Patronales</td>
+            <td class="right">${{ number_format($detail->isss_patronal + $detail->afp_patronal, 2) }}</td>
         </tr>
     </table>
 

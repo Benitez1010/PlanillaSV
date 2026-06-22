@@ -33,6 +33,8 @@ class PayrollDetail extends Model
         'subsidio_incapacidad',
     ];
 
+    protected $appends = ['pago_horas_extras_diurnas', 'pago_horas_extras_nocturnas', 'isss_patronal', 'afp_patronal'];
+
     protected function casts(): array
     {
         return [
@@ -48,6 +50,26 @@ class PayrollDetail extends Model
             'descuento_ausencias' => 'float',
             'subsidio_incapacidad' => 'float',
         ];
+    }
+
+    public function getPagoHorasExtrasDiurnasAttribute(): float
+    {
+        return round($this->horas_extra_diurnas * ($this->salario_base / 240) * 2.0, 2);
+    }
+
+    public function getPagoHorasExtrasNocturnasAttribute(): float
+    {
+        return round($this->horas_extra_nocturnas * ($this->salario_base / 240) * 2.25, 2);
+    }
+
+    public function getIsssPatronalAttribute(): float
+    {
+        return round(min($this->salario_base, 1000) * 0.075, 2);
+    }
+
+    public function getAfpPatronalAttribute(): float
+    {
+        return round($this->salario_base * 0.0875, 2);
     }
 
     public function payroll(): BelongsTo
