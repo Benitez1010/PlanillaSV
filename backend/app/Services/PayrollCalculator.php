@@ -45,20 +45,25 @@ class PayrollCalculator
         return round(($rentaGravable - $ultimo['exceso']) * $ultimo['tasa'] + $ultimo['cuota_fija'], 2);
     }
 
-    public function calcularBonoQuincena25(float $salario, string $periodo): float
+    public function calcularBonoQuincena25(float $salario, string $periodo, bool $forzar = false): float
     {
-        $mes = (int) substr($periodo, 5, 2);
-        if ($mes === 1 && $salario <= 1500) {
+        if (!$forzar) {
+            $mes = (int) substr($periodo, 5, 2);
+            if ($mes !== 1) return 0;
+        }
+        if ($salario <= 1500) {
             return round($salario * 0.50, 2);
         }
         return 0;
     }
 
-    public function calcularAguinaldo(float $salario, Carbon $fechaIngreso, string $periodo): float
+    public function calcularAguinaldo(float $salario, Carbon $fechaIngreso, string $periodo, bool $forzar = false): float
     {
-        $mes = (int) substr($periodo, 5, 2);
         $anio = (int) substr($periodo, 0, 4);
-        if ($mes !== 12) return 0;
+        if (!$forzar) {
+            $mes = (int) substr($periodo, 5, 2);
+            if ($mes !== 12) return 0;
+        }
 
         $corte = Carbon::create($anio, 12, 12);
         $antiguedad = $fechaIngreso->diffInYears($corte);
@@ -212,12 +217,12 @@ class PayrollCalculator
         ];
     }
 
-    public function calcularEmpleado(Employee $employee, string $periodo, bool $aplicarVacaciones = false, array $horas = [], array $ausencias = []): array
+    public function calcularEmpleado(Employee $employee, string $periodo, bool $aplicarVacaciones = false, array $horas = [], array $ausencias = [], bool $pagarAguinaldo = false, bool $pagarQuincena25 = false): array
     {
         $salarioNominal = (float) $employee->salario_nominal;
 
-        $bonoQuincena25 = $this->calcularBonoQuincena25($salarioNominal, $periodo);
-        $aguinaldo = $this->calcularAguinaldo($salarioNominal, $employee->fecha_ingreso, $periodo);
+        $bonoQuincena25 = $this->calcularBonoQuincena25($salarioNominal, $periodo, $pagarQuincena25);
+        $aguinaldo = $this->calcularAguinaldo($salarioNominal, $employee->fecha_ingreso, $periodo, $pagarAguinaldo);
 
         $vacacionData = ['dias_vacaciones' => 0, 'prima_vacacional' => 0, 'pago_vacaciones' => 0];
         if ($aplicarVacaciones) {

@@ -76,12 +76,15 @@ export const payrollApi = {
   getAll: (params?: { estado?: string; search?: string }) =>
     api.get('/payrolls', { params }),
   getById: (id: number) => api.get(`/payrolls/${id}`),
-  generate: (data: { periodo: string; vacaciones_ids?: number[] }) =>
+  generate: (data: { periodo: string; vacaciones_ids?: number[]; pagar_aguinaldo?: boolean; pagar_quincena25?: boolean }) =>
+
     api.post('/payrolls/generate', data),
+
+  refresh: (id: number, data?: { vacaciones_ids?: number[]; pagar_aguinaldo?: boolean; pagar_quincena25?: boolean }) =>
+
+    api.post(`/payrolls/${id}/refresh`, data || {}),
   close: (id: number) => api.patch(`/payrolls/${id}/close`),
   discard: (id: number) => api.delete(`/payrolls/${id}/discard`),
-  refresh: (id: number, data?: { vacaciones_ids?: number[] }) =>
-    api.post(`/payrolls/${id}/refresh`, data || {}),
   receipt: (payrollId: number, employeeId: number) =>
     api.get(`/payrolls/${payrollId}/receipt/${employeeId}`, { responseType: 'blob' }),
 }

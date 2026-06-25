@@ -45,10 +45,14 @@ class PayrollController extends Controller
             'periodo' => 'required|string|max:7',
             'vacaciones_ids' => 'sometimes|array',
             'vacaciones_ids.*' => 'integer|exists:employees,id',
+            'pagar_aguinaldo' => 'boolean',
+            'pagar_quincena25' => 'boolean',
         ]);
 
         $periodo = $validated['periodo'];
         $vacacionesIds = $validated['vacaciones_ids'] ?? [];
+        $pagarAguinaldo = $validated['pagar_aguinaldo'] ?? false;
+        $pagarQuincena25 = $validated['pagar_quincena25'] ?? false;
 
         if (Payroll::where('periodo', $periodo)->exists()) {
             return response()->json([
@@ -79,7 +83,7 @@ class PayrollController extends Controller
             $aplicarVac = in_array($employee->id, $vacacionesIds);
             $horas = $this->getHorasAprobadas($employee->id, $periodo);
             $ausencias = $this->calculator->calcularAusencias($employee, $periodo);
-            $calc = $this->calculator->calcularEmpleado($employee, $periodo, $aplicarVac, $horas, $ausencias);
+            $calc = $this->calculator->calcularEmpleado($employee, $periodo, $aplicarVac, $horas, $ausencias, $pagarAguinaldo, $pagarQuincena25);
 
             $detalles[] = [
                 'employee_id' => $employee->id,
@@ -175,9 +179,13 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'vacaciones_ids' => 'sometimes|array',
             'vacaciones_ids.*' => 'integer|exists:employees,id',
+            'pagar_aguinaldo' => 'boolean',
+            'pagar_quincena25' => 'boolean',
         ]);
 
         $vacacionesIds = $validated['vacaciones_ids'] ?? [];
+        $pagarAguinaldo = $validated['pagar_aguinaldo'] ?? false;
+        $pagarQuincena25 = $validated['pagar_quincena25'] ?? false;
         $periodo = $payroll->periodo;
         $lastDay = Carbon::createFromFormat('Y-m', $periodo)->endOfMonth()->format('Y-m-d');
         $employees = Employee::where('estado', 'activo')
@@ -197,7 +205,7 @@ class PayrollController extends Controller
             $aplicarVac = in_array($employee->id, $vacacionesIds);
             $horas = $this->getHorasAprobadas($employee->id, $periodo);
             $ausencias = $this->calculator->calcularAusencias($employee, $periodo);
-            $calc = $this->calculator->calcularEmpleado($employee, $periodo, $aplicarVac, $horas, $ausencias);
+            $calc = $this->calculator->calcularEmpleado($employee, $periodo, $aplicarVac, $horas, $ausencias, $pagarAguinaldo, $pagarQuincena25);
 
             PayrollDetail::create([
                 'payroll_id' => $payroll->id,

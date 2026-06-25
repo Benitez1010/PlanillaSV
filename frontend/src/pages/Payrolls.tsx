@@ -67,6 +67,8 @@ export default function Payrolls() {
   const [actionLoading, setActionLoading] = useState(false)
   const [employees, setEmployees] = useState<any[]>([])
   const [vacacionesIds, setVacacionesIds] = useState<number[]>([])
+  const [pagarAguinaldo, setPagarAguinaldo] = useState(false)
+  const [pagarQuincena25, setPagarQuincena25] = useState(false)
 
   const loadPayrolls = () => {
     payrollApi.getAll({ search: search || undefined }).then(res => setPayrolls(res.data))
@@ -88,13 +90,21 @@ export default function Payrolls() {
       })
       .map((e: any) => e.id)
     setVacacionesIds(eligibleIds)
+    const mes = parseInt(periodo.split('-')[1])
+    setPagarAguinaldo(mes >= 10 && mes <= 12)
+    setPagarQuincena25(mes === 1)
     setShowGenerate(true)
   }
 
   const handleGenerate = async () => {
     setGenerating(true)
     try {
-      const res = await payrollApi.generate({ periodo, vacaciones_ids: vacacionesIds })
+      const res = await payrollApi.generate({
+        periodo,
+        vacaciones_ids: vacacionesIds,
+        pagar_aguinaldo: pagarAguinaldo,
+        pagar_quincena25: pagarQuincena25,
+      })
       setPayrolls(prev => [res.data, ...prev])
       setSelected(res.data)
       setShowGenerate(false)
@@ -142,7 +152,11 @@ export default function Payrolls() {
   const handleRefresh = async (id: number) => {
     setActionLoading(true)
     try {
-      const res = await payrollApi.refresh(id, { vacaciones_ids: vacacionesIds })
+      const res = await payrollApi.refresh(id, {
+        vacaciones_ids: vacacionesIds,
+        pagar_aguinaldo: pagarAguinaldo,
+        pagar_quincena25: pagarQuincena25,
+      })
       setSelected(res.data)
       toast.success('Planilla recalculada')
       setConfirmAction(null)
@@ -272,6 +286,38 @@ export default function Payrolls() {
                 </div>
               </div>
             )}
+
+            <div className="flex gap-4 pt-2">
+              {(() => {
+                const mes = parseInt(periodo.split('-')[1])
+                return (
+                  <>
+                    {mes === 1 && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={pagarQuincena25}
+                          onChange={e => setPagarQuincena25(e.target.checked)}
+                          className="rounded text-secondary focus:ring-secondary"
+                        />
+                        <span className="text-sm">Pagar Bonificación Quincena25</span>
+                      </label>
+                    )}
+                    {mes >= 10 && mes <= 12 && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={pagarAguinaldo}
+                          onChange={e => setPagarAguinaldo(e.target.checked)}
+                          className="rounded text-secondary focus:ring-secondary"
+                        />
+                        <span className="text-sm">Pagar Aguinaldo</span>
+                      </label>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
 
             <div className="flex gap-3 pt-2">
               <button onClick={handleGenerate} disabled={generating}
