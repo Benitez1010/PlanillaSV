@@ -141,6 +141,12 @@
                 </tr>
             @endforeach
         @endif
+        @if (($calcAusencias['septimos_dias'] ?? 0) > 0)
+        <tr>
+            <td colspan="2">Séptimo día — {{ $calcAusencias['septimos_dias'] }} día(s) por ausencias injustificadas</td>
+            <td class="right">${{ number_format($calcAusencias['septimos_dias'] * $salarioDiario, 2) }}</td>
+        </tr>
+        @endif
         <tr>
             <td colspan="2">ISSS (3%)</td>
             <td class="right">${{ number_format($detail->isss, 2) }}</td>
