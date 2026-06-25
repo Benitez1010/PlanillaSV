@@ -58,9 +58,9 @@ export default function Dashboard() {
     setEmployees(res.data.filter((e: any) => e.estado === 'activo'))
     const eligibleIds = res.data
       .filter((e: any) => {
-        const ing = new Date(e.fecha_ingreso)
+        const p = e.fecha_ingreso.split('-')
         const mes = parseInt(periodo.split('-')[1])
-        return ing.getMonth() + 1 === mes && ing.getFullYear() < parseInt(periodo.split('-')[0])
+        return parseInt(p[1]) === mes && parseInt(p[0]) < parseInt(periodo.split('-')[0])
       })
       .map((e: any) => e.id)
     setVacacionesIds(eligibleIds)
@@ -247,8 +247,8 @@ export default function Dashboard() {
                 const mes = parseInt(e.target.value.split('-')[1])
                 const anio = parseInt(e.target.value.split('-')[0])
                 const ids = employees.filter((emp: any) => {
-                  const ing = new Date(emp.fecha_ingreso)
-                  return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                  const p = emp.fecha_ingreso.split('-')
+                  return parseInt(p[1]) === mes && parseInt(p[0]) < anio
                 }).map((emp: any) => emp.id)
                 setVacacionesIds(ids)
               }}
@@ -260,10 +260,10 @@ export default function Dashboard() {
               </label>
               <div className="max-h-40 overflow-y-auto space-y-1.5 border border-gray-200 rounded-lg p-2">
                 {employees.map((emp: any) => {
-                  const ing = new Date(emp.fecha_ingreso)
+                  const p = emp.fecha_ingreso.split('-')
                   const mes = parseInt(periodo.split('-')[1])
                   const anio = parseInt(periodo.split('-')[0])
-                  const esElegible = ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                  const esElegible = parseInt(p[1]) === mes && parseInt(p[0]) < anio
                   return (
                     <label key={emp.id} className={`flex items-center gap-2 p-1.5 rounded ${esElegible ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50'}`}>
                       <input

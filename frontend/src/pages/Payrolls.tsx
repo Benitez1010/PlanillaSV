@@ -80,9 +80,11 @@ export default function Payrolls() {
     setEmployees(res.data.filter((e: any) => e.estado === 'activo'))
     const eligibleIds = res.data
       .filter((e: any) => {
-        const ingreso = new Date(e.fecha_ingreso)
+        const partes = e.fecha_ingreso.split('-')
+        const mesIngreso = parseInt(partes[1])
+        const anioIngreso = parseInt(partes[0])
         const mes = parseInt(periodo.split('-')[1])
-        return ingreso.getMonth() + 1 === mes && ingreso.getFullYear() < parseInt(periodo.split('-')[0])
+        return mesIngreso === mes && anioIngreso < parseInt(periodo.split('-')[0])
       })
       .map((e: any) => e.id)
     setVacacionesIds(eligibleIds)
@@ -236,8 +238,8 @@ export default function Payrolls() {
                 const mes = parseInt(e.target.value.split('-')[1])
                 const anio = parseInt(e.target.value.split('-')[0])
                 const ids = employees.filter((emp: any) => {
-                  const ing = new Date(emp.fecha_ingreso)
-                  return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                  const p = emp.fecha_ingreso.split('-')
+                  return parseInt(p[1]) === mes && parseInt(p[0]) < anio
                 }).map((e: any) => e.id)
                 setVacacionesIds(ids)
               }}
@@ -252,8 +254,8 @@ export default function Payrolls() {
                     const mes = parseInt(periodo.split('-')[1])
                     const anio = parseInt(periodo.split('-')[0])
                     const elegibles = employees.filter((emp: any) => {
-                      const ing = new Date(emp.fecha_ingreso)
-                      return ing.getMonth() + 1 === mes && ing.getFullYear() < anio
+                      const p = emp.fecha_ingreso.split('-')
+                      return parseInt(p[1]) === mes && parseInt(p[0]) < anio
                     })
                     return elegibles.length > 0 ? elegibles.map((emp: any) => (
                       <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
@@ -364,9 +366,9 @@ export default function Payrolls() {
                     <th className="text-right p-3 font-medium text-gray-500">Aguinaldo</th>
                     <th className="text-right p-3 font-medium text-gray-500">Vacaciones</th>
                     <th className="text-right p-3 font-medium text-gray-500">Horas Nocturnas</th>
-                    <th className="text-right p-3 font-medium text-gray-500">Horas Extras</th>
                     <th className="text-right p-3 font-medium text-gray-500">H.E. Diurnas</th>
                     <th className="text-right p-3 font-medium text-gray-500">H.E. Nocturnas</th>
+                    <th className="text-right p-3 font-medium text-gray-500">H.E. Netas</th>
                     <th className="text-right p-3 font-medium text-gray-500">ISSS</th>
                     <th className="text-right p-3 font-medium text-gray-500">AFP</th>
                     <th className="text-right p-3 font-medium text-gray-500">ISR</th>
@@ -386,9 +388,9 @@ export default function Payrolls() {
                       <td className="p-3 text-right text-blue-600">{d.aguinaldo > 0 ? formatCurrency(d.aguinaldo) : '—'}</td>
                       <td className="p-3 text-right text-purple-600">{d.pago_vacaciones > 0 ? formatCurrency(d.pago_vacaciones) : '—'}</td>
                       <td className="p-3 text-right text-gray-500">{d.pago_horas_normales > 0 ? formatCurrency(d.pago_horas_normales) : '—'}</td>
-                      <td className="p-3 text-right text-yellow-600">{d.pago_horas_extras > 0 ? formatCurrency(d.pago_horas_extras) : '—'}</td>
                       <td className="p-3 text-right text-amber-500">{d.pago_horas_extras_diurnas > 0 ? formatCurrency(d.pago_horas_extras_diurnas) : '—'}</td>
                       <td className="p-3 text-right text-amber-700">{d.pago_horas_extras_nocturnas > 0 ? formatCurrency(d.pago_horas_extras_nocturnas) : '—'}</td>
+                      <td className="p-3 text-right text-yellow-600">{d.pago_horas_extras > 0 ? formatCurrency(d.pago_horas_extras) : '—'}</td>
                       <td className="p-3 text-right text-red-500">{formatCurrency(d.isss)}</td>
                       <td className="p-3 text-right text-orange-500">{formatCurrency(d.afp)}</td>
                       <td className="p-3 text-right text-purple-500">{formatCurrency(d.isr)}</td>
@@ -413,9 +415,9 @@ export default function Payrolls() {
                     <td className="p-3 text-right"></td>
                     <td className="p-3 text-right"></td>
                     <td className="p-3 text-right text-gray-500">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_normales, 0))}</td>
-                    <td className="p-3 text-right text-yellow-600">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras, 0))}</td>
                     <td className="p-3 text-right text-amber-500">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras_diurnas, 0))}</td>
                     <td className="p-3 text-right text-amber-700">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras_nocturnas, 0))}</td>
+                    <td className="p-3 text-right text-yellow-600">{formatCurrency(selected.details.reduce((s, d) => s + d.pago_horas_extras, 0))}</td>
                     <td className="p-3 text-right text-red-500">{formatCurrency(selected.total_isss)}</td>
                     <td className="p-3 text-right text-orange-500">{formatCurrency(selected.total_afp)}</td>
                     <td className="p-3 text-right text-purple-500">{formatCurrency(selected.total_isr)}</td>

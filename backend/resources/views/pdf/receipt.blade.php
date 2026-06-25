@@ -23,6 +23,19 @@
     </style>
 </head>
 <body>
+    @php
+        $horasNormales = ($detail->horas_normales_diurnas ?? 0) + ($detail->horas_normales_nocturnas ?? 0);
+        $factorHoras = $horasNormales > 0 ? min($horasNormales / 240, 1) : 1;
+        $salarioProrrateado = round($detail->salario_base * $factorHoras, 2);
+
+        $totalIngresos = $salarioProrrateado
+            + ($detail->pago_horas_normales ?? 0)
+            + ($detail->pago_horas_extras ?? 0)
+            + ($detail->bono_quincena25 ?? 0)
+            + ($detail->aguinaldo ?? 0)
+            + ($detail->pago_vacaciones ?? 0)
+            + ($detail->subsidio_incapacidad ?? 0);
+    @endphp
     <div class="header">
         <h1>Grupo NSV S.A. de C.V</h1>
         <p>NIT: 0614-27081-105-3</p>
@@ -35,6 +48,9 @@
         <tr><td class="label">Empleado:</td><td>{{ $detail->employee->nombre_completo }}</td></tr>
         <tr><td class="label">Período:</td><td>{{ $payroll->periodo }}</td></tr>
         <tr><td class="label">Salario Nominal:</td><td>${{ number_format($detail->salario_base, 2) }}</td></tr>
+        @if ($factorHoras < 1)
+        <tr><td class="label">Factor Horas:</td><td>{{ number_format($factorHoras * 100, 1) }}% ({{ $horasNormales }}/240 h)</td></tr>
+        @endif
     </table>
 
     <table class="detalle">
@@ -44,7 +60,7 @@
         </tr>
         <tr>
             <td colspan="2">Salario Ordinario</td>
-            <td class="right">${{ number_format($detail->salario_base, 2) }}</td>
+            <td class="right">${{ number_format($salarioProrrateado, 2) }}</td>
         </tr>
         @if ($detail->pago_horas_normales > 0)
         <tr>
@@ -66,7 +82,7 @@
         @endif
         @if ($detail->bono_quincena25 > 0)
         <tr>
-            <td colspan="2">Bono Quincena25</td>
+            <td colspan="2">Bonificaci&oacute;n Quincena25</td>
             <td class="right">${{ number_format($detail->bono_quincena25, 2) }}</td>
         </tr>
         @endif
@@ -84,16 +100,19 @@
         @endif
         @if ($detail->subsidio_incapacidad > 0)
         <tr>
-            <td colspan="2">Subsidio ISSS (75% primeros 3 días)</td>
+            <td colspan="2">Subsidio Patronal (100% primeros 3 días)</td>
             <td class="right">${{ number_format($detail->subsidio_incapacidad, 2) }}</td>
+        </tr>
+        @endif
+        @if (($calcAusencias['dias_incapacidad_sin_pago'] ?? 0) > 0)
+        <tr style="color: #999; font-size: 9px; font-style: italic;">
+            <td colspan="2">* Días asumidos por ISSS (75% ref.) — {{ number_format($calcAusencias['dias_incapacidad_sin_pago']) }} día(s)</td>
+            <td class="right">${{ number_format($calcAusencias['monto_isss_referencia'], 2) }}</td>
         </tr>
         @endif
         <tr class="total">
             <td colspan="2">Total Ingresos</td>
-            <td class="right">${{ number_format(
-                $detail->salario_base + $detail->pago_horas_normales + $detail->pago_horas_extras +
-                $detail->bono_quincena25 + $detail->aguinaldo + $detail->pago_vacaciones +
-                $detail->subsidio_incapacidad, 2) }}</td>
+            <td class="right">${{ number_format($totalIngresos, 2) }}</td>
         </tr>
     </table>
 
@@ -104,6 +123,7 @@
         </tr>
         @if (count($ausencias) > 0)
             @foreach ($ausencias as $a)
+                @if ($a->tipo === 'Incapacidad ISSS') @continue @endif
                 @php
                     $dias = !empty($a->dias) ? count($a->dias) : 0;
                     if ($dias === 0) {

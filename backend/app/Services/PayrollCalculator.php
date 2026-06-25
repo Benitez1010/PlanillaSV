@@ -129,6 +129,7 @@ class PayrollCalculator
         $diasInjustificados = 0;
         $diasPermiso = 0;
         $diasIncapacidad = 0;
+        $diasSinPago = 0;
         $semanasAfectadas = [];
 
         foreach ($ausencias as $a) {
@@ -141,7 +142,7 @@ class PayrollCalculator
             $diasLaborales = 0;
 
             if (!empty($a->dias)) {
-                // Use individual dates when available
+                // Usa las fechas individuales cuando estén disponibles
                 foreach ($a->dias as $fechaStr) {
                     $fecha = \Carbon\Carbon::parse($fechaStr);
                     if ($fecha->between($inicioPeriodo, $finPeriodo) && $fecha->dayOfWeek >= 1 && $fecha->dayOfWeek <= 5) {
@@ -149,8 +150,9 @@ class PayrollCalculator
                     }
                 }
             } else {
-                // Fallback: count weekdays within range (legacy data)
-                for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
+                // Fallback: contar días laborales en el rango (datos legacy)
+                $d = \Carbon\Carbon::parse($inicioPeriodo);
+                for (; $d <= $finPeriodo; $d->addDay()) {
                     if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
                         $diasLaborales++;
                     }
@@ -163,10 +165,11 @@ class PayrollCalculator
                 case 'Injustificada':
                     $totalDescuento += $diasLaborales * $salarioDiario;
                     $diasInjustificados += $diasLaborales;
-                    // Track unique weeks for seventh-day calculation
+                    // Rastrea semanas únicas para el cálculo del séptimo día
                     $fechas = !empty($a->dias) ? $a->dias : [];
                     if (empty($fechas)) {
-                        for ($d = (clone $inicioPeriodo); $d <= $finPeriodo; $d->addDay()) {
+                        $d = \Carbon\Carbon::parse($inicioPeriodo);
+                        for (; $d <= $finPeriodo; $d->addDay()) {
                             if ($d->dayOfWeek >= 1 && $d->dayOfWeek <= 5) {
                                 $fechas[] = $d->format('Y-m-d');
                             }
@@ -186,15 +189,14 @@ class PayrollCalculator
                     break;
                 case 'Incapacidad ISSS':
                     $diasPago = min($diasLaborales, 3);
-                    $subsidioIncapacidad += $diasPago * $salarioDiario * 0.75;
+                    $subsidioIncapacidad += $diasPago * $salarioDiario * 1.0;
                     $diasSinPago = $diasLaborales - $diasPago;
-                    $totalDescuento += $diasSinPago * $salarioDiario;
                     $diasIncapacidad += $diasLaborales;
                     break;
             }
         }
 
-        // Add one seventh day per unique week with unjustified absence
+        // Agrega un séptimo día por cada semana única con ausencia injustificada
         $septimosDias = count($semanasAfectadas);
         $totalDescuento += $septimosDias * $salarioDiario;
 
@@ -202,6 +204,8 @@ class PayrollCalculator
             'dias_injustificados' => $diasInjustificados,
             'dias_permiso' => $diasPermiso,
             'dias_incapacidad' => $diasIncapacidad,
+            'dias_incapacidad_sin_pago' => $diasSinPago,
+            'monto_isss_referencia' => round($diasSinPago * $salarioDiario * 0.75, 2),
             'septimos_dias' => $septimosDias,
             'total_descuento' => round($totalDescuento, 2),
             'subsidio_incapacidad' => round($subsidioIncapacidad, 2),

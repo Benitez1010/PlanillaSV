@@ -225,6 +225,13 @@ class PayrollController extends Controller
                 'subsidio_incapacidad' => $calc['subsidio_incapacidad'],
             ]);
 
+            if ($aplicarVac) {
+                $employee->update([
+                    'aplicar_vacaciones' => false,
+                    'ultimas_vacaciones' => now(),
+                ]);
+            }
+
             $totalBruto += $calc['salario_base'] + $calc['bono_total'] + $calc['pago_vacaciones'] + $calc['pago_horas_normales'] + $calc['pago_horas_extras'] + $calc['subsidio_incapacidad'];
             $totalBruto -= $calc['descuento_ausencias'];
             $totalISSS += $calc['isss'];
@@ -258,6 +265,8 @@ class PayrollController extends Controller
             ->where('fecha_fin', '>=', "{$payroll->periodo}-01")
             ->get();
 
+        $calcAusencias = $this->calculator->calcularAusencias($employee, $payroll->periodo);
+
         $salarioDiario = $detail->salario_base / 30;
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', [
@@ -265,6 +274,7 @@ class PayrollController extends Controller
             'detail' => $detail,
             'ausencias' => $ausencias,
             'salarioDiario' => $salarioDiario,
+            'calcAusencias' => $calcAusencias,
         ]);
 
         $filename = "boleta_{$employee->nombres}_{$employee->apellidos}_{$payroll->periodo}.pdf";
